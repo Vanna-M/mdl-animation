@@ -140,7 +140,6 @@ struct vary_node ** second_pass() {
   struct vary_node ** knobs = (struct vary_node **)malloc(sizeof(struct vary_node *) * num_frames);
 
   int i;
-  int k = 0;
   for (i=0;i<lastop;i++) {
 
     //only care about knobs
@@ -148,20 +147,37 @@ struct vary_node ** second_pass() {
 
       //add to all relevant frames
       int j;
-      for (j = op[i].op.vary.start_frame; j < op[i].op.vary.end_frame; j++){
+      if (op[i].op.vary.end_val > op[i].op.vary.start_val){
+        printf("%s, increasing from %.f to %.f\n",op[i].op.vary.p->name,op[i].op.vary.start_frame,op[i].op.vary.end_frame);
+        for (j = op[i].op.vary.start_frame; j < op[i].op.vary.end_frame; j++){
 
-        //init
-        struct vary_node * newKnob = (struct vary_node*)malloc(sizeof(struct vary_node));
-        strcpy(newKnob->name,op[i].op.vary.p->name);
-        //percentage x endval + startval
-        newKnob->value = (j / (op[i].op.vary.end_frame - op[i].op.vary.start_frame)*(op[i].op.vary.end_val) + op[i].op.vary.start_val);
+          //init
+          struct vary_node * newKnob = (struct vary_node*)malloc(sizeof(struct vary_node));
+          strcpy(newKnob->name,op[i].op.vary.p->name);
+          //percentage x endval + startval
+          newKnob->value = (j / (op[i].op.vary.end_frame - op[i].op.vary.start_frame)*(op[i].op.vary.end_val) + op[i].op.vary.start_val);
 
-        //add it in
-        newKnob->next = knobs[j];
-        knobs[j] = newKnob;
+          //add it in
+          newKnob->next = knobs[j];
+          knobs[j] = newKnob;
 
+        }
       }
-      k++;
+      else{
+        printf("%s, decreasing from %.f to %.f\n",op[i].op.vary.p->name,op[i].op.vary.start_frame,op[i].op.vary.end_frame);
+        for (j = op[i].op.vary.end_frame; j > op[i].op.vary.start_frame; j--){
+
+          //init
+          struct vary_node * newKnob = (struct vary_node*)malloc(sizeof(struct vary_node));
+          strcpy(newKnob->name,op[i].op.vary.p->name);
+          //percentage( = end - current / end - start) x startval + endval
+          newKnob->value = ((op[i].op.vary.end_frame - j) / (op[i].op.vary.end_frame - op[i].op.vary.start_frame)*(op[i].op.vary.start_val) + op[i].op.vary.end_val);
+
+          //add it in
+          newKnob->next = knobs[j];
+          knobs[j] = newKnob;
+        }
+      }
     }
   }
 
