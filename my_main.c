@@ -148,14 +148,13 @@ struct vary_node ** second_pass() {
       //add to all relevant frames
       int j;
       if (op[i].op.vary.end_val > op[i].op.vary.start_val){
-        printf("%s, increasing from %.f to %.f\n",op[i].op.vary.p->name,op[i].op.vary.start_frame,op[i].op.vary.end_frame);
-        for (j = op[i].op.vary.start_frame; j < op[i].op.vary.end_frame; j++){
+        for (j = op[i].op.vary.start_frame; j <= op[i].op.vary.end_frame; j++){
 
           //init
           struct vary_node * newKnob = (struct vary_node*)malloc(sizeof(struct vary_node));
           strcpy(newKnob->name,op[i].op.vary.p->name);
-          //percentage x endval + startval
-          newKnob->value = (j / (op[i].op.vary.end_frame - op[i].op.vary.start_frame)*(op[i].op.vary.end_val) + op[i].op.vary.start_val);
+          //percentage(= end-current/end-start) x endval + startval
+          newKnob->value = (((j-op[i].op.vary.start_frame) / (op[i].op.vary.end_frame - op[i].op.vary.start_frame))*(op[i].op.vary.end_val)) + op[i].op.vary.start_val;
 
           //add it in
           newKnob->next = knobs[j];
@@ -164,14 +163,13 @@ struct vary_node ** second_pass() {
         }
       }
       else{
-        printf("%s, decreasing from %.f to %.f\n",op[i].op.vary.p->name,op[i].op.vary.start_frame,op[i].op.vary.end_frame);
-        for (j = op[i].op.vary.end_frame; j > op[i].op.vary.start_frame; j--){
+        for (j = op[i].op.vary.end_frame; j >= op[i].op.vary.start_frame; j--){
 
           //init
           struct vary_node * newKnob = (struct vary_node*)malloc(sizeof(struct vary_node));
           strcpy(newKnob->name,op[i].op.vary.p->name);
           //percentage( = end - current / end - start) x startval + endval
-          newKnob->value = ((op[i].op.vary.end_frame - j) / (op[i].op.vary.end_frame - op[i].op.vary.start_frame)*(op[i].op.vary.start_val) + op[i].op.vary.end_val);
+          newKnob->value = (((op[i].op.vary.end_frame - j) / (op[i].op.vary.end_frame - op[i].op.vary.start_frame))*(op[i].op.vary.start_val)) + op[i].op.vary.end_val;
 
           //add it in
           newKnob->next = knobs[j];
@@ -386,7 +384,22 @@ void third_pass(struct matrix *tmp,struct stack *systems,screen t,color g){
 	  copy_matrix(tmp, peek(systems));
 	  tmp->lastcol = 0;
 	  break;
-	case PUSH:
+  case SET:
+     for ( j=0; j < lastsym; j++ ) {
+
+       if ( strcmp(symtab[j].name,op[i].op.set.p->name) == 0 ) {
+         symtab[j].s.value = op[i].op.set.p->s.value;
+       }
+     }
+     break;
+  case SETKNOBS:
+    //go through all knobs
+    for ( j=0; j < lastsym; j++ ) {
+      //set value
+      symtab[j].s.value = op[i].op.setknobs.value;
+    }
+    break;
+  case PUSH:
 	  printf("Push");
 	  push(systems);
 	  break;
@@ -469,6 +482,7 @@ void my_main() {
       struct vary_node * head = knobs[i];
       int j;
       while (head){
+        //go through symtab and add in proper knobval
         for ( j=0; j < lastsym; j++ ) {
 
           if ( strcmp(symtab[j].name,head->name) == 0 ) {
@@ -496,10 +510,10 @@ void my_main() {
       sprintf(n,"%s%s%s\n",name,s,".png");
 
       third_pass(tmp, systems, t, g);
-      //print_knobs();
 
       //print
       printf("Saving %s\n",n);
+      //print_knobs();
       //save
       save_extension(t, n);
 
@@ -507,6 +521,8 @@ void my_main() {
       free_matrix(tmp);
 
     }
+
+    make_animation(name);
   }
   //static
   else{

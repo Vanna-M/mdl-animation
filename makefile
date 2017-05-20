@@ -52,3 +52,7 @@ static:
 
 animation:
 	cat simple_anim.mdl | ./mdl
+
+run:
+	rm anim/*
+	cat my_anim.mdl | ./mdl
